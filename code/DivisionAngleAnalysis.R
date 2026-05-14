@@ -1,7 +1,4 @@
 
-# ================================================================
-# 0. 基本设置
-# ================================================================
 root_dir <- "~/Desktop/cbcn/"
 setwd(root_dir)
 
@@ -14,9 +11,6 @@ suppressPackageStartupMessages({
   library(purrr)
 })
 
-# ================================================================
-# 1. 阶段定义
-# ================================================================
 Stage_AB4 <- c("ABal", "ABar", "ABpl", "ABpr", "MS", "E", "C")
 Stage_AB8  <- c('ABala','ABalp','ABara','ABarp','ABpla','ABplp','ABpra','ABprp','MSa','MSp','Ca','Cp','P3')
 Stage_AB16 <- c('ABalaa','ABalap','ABalpa','ABalpp','ABaraa','ABarap','ABarpa','ABarpp',
@@ -101,9 +95,6 @@ stage_assign <- function(cell) {
   )
 }
 
-# ================================================================
-# 2. 数据集信息
-# ================================================================
 make_meta <- function(prefix, files, times, scale) {
   tibble(dataset = paste0(prefix, seq_along(files)),
          file    = files,
@@ -146,10 +137,7 @@ cn_meta <- make_meta("cn",
 
 dataset_meta <- bind_rows(ce_meta, cb_meta, cn_meta)
 
-# ================================================================
-# 3. 第一条链：final_result & cell division angle
-#    ——完全保持原脚本的处理方式（无 stage）
-# ================================================================
+
 process_dis_base <- function(data, time_limit, scale_factor) {
   data %>%
     select(2, 3, 9, 10, 11) %>%
@@ -308,10 +296,6 @@ output_dir <- file.path(root_dir, "draft_code/new/")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 write.csv(merged_df, file = file.path(output_dir, "all_divisionAngle.csv"), row.names = FALSE)
 
-# ================================================================
-# 4. 第二条链：角度范围 & 斜率
-#    ——与原脚本一致，含 stage 并对 NA 行执行 na.omit()
-# ================================================================
 process_dis_stage <- function(data, time_limit, scale_factor) {
   data %>%
     select(2, 3, 9, 10, 11) %>%
@@ -411,8 +395,6 @@ wide_slope <- angle_summary_slope %>%
     names_prefix = "angle_slope_"
   )
 
-#write.csv(wide_slope, file = file.path(output_dir, "con_angle_slope.csv"), row.names = FALSE)
-
 
 
 
@@ -445,52 +427,19 @@ data <- data %>%
 colnames(data)
 
 
-# 假设你的数据存储在变量 data 中
-# 利用 tidyr::pivot_longer 将数据从宽格式转换为长格式
 data_long <- pivot_longer(
   data,
   cols = c("mean_ce", "mean_cb", "mean_cn"),
   names_to = "group",
   values_to = "value"
 )
-# 修改分组名称（去掉前缀 "mean_"），使之和颜色映射对应
+
 data_long$group <- gsub("mean_", "", data_long$group)
 
-# 设置分组顺序为 ce, cb, cn
+
 data_long$group <- factor(data_long$group, levels = c("cn", "cb", "ce"))
 
-# 绘制蜂巢图，并设置四边框和自定义颜色
-# p_4f <- ggplot(data_long, aes(x = value, y = group, color = group)) +
-#   geom_beeswarm(size = 0.6, shape = 16) +
-#   labs(
-#     title = "distribution of cell division angle",
-#     x = "value",
-#     y = ""
-#   ) +
-#   theme_minimal() +
-#   theme(
-#     panel.background = element_blank(),
-#     panel.grid = element_blank(),
-#     plot.background = element_blank(),
-#     panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-#     axis.line = element_blank(),
-#     axis.ticks = element_line(color = "black"),            # 显示刻度线
-#     axis.text = element_text(size = 12),
-#     legend.position = "none"
-#   ) +
-#   scale_color_manual(values = c("ce" = "#CD534C", "cb" = "#0073C2", "cn" = "#EFC000"))
-# 
-# print(p_4f)
-# # 绘制热图
-# ggsave(
-#   filename = "divangle_distribution.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 6,                            # 图形宽度（单位默认为英寸）
-#   height = 3,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
-# 如果还没有安装 ggridges，请先安装
-#install.packages("ggridges")
+
 library(ggridges)
 
 p_4f <- ggplot(data_long, aes(x = value, y = group, fill = group)) +
@@ -511,14 +460,6 @@ p_4f <- ggplot(data_long, aes(x = value, y = group, fill = group)) +
   scale_fill_manual(values = c("ce" = "#CD534C", "cb" = "#0073C2", "cn" = "#EFC000"))
 
 print(p_4f)
-# # # 绘制热图
-# ggsave(
-#   filename = "divangle_distribution.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 6,                            # 图形宽度（单位默认为英寸）
-#   height = 3,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
 
 # Compute the density for each group and extract the peaks
@@ -553,22 +494,18 @@ data <- data %>%
 colnames(data)
 
 
-# 假设你的数据存储在变量 data 中
-# 利用 tidyr::pivot_longer 将数据从宽格式转换为长格式
+
 data_long <- pivot_longer(
   data,
   cols = c("mean_ce", "mean_cb", "mean_cn"),
   names_to = "group",
   values_to = "value"
 )
-# 修改分组名称（去掉前缀 "mean_"），使之和颜色映射对应
 data_long$group <- gsub("mean_", "", data_long$group)
 
-# 设置分组顺序为 ce, cb, cn
 data_long$group <- factor(data_long$group, levels = c("cn", "cb", "ce"))
 
 library(ggridges)
-# 绘制蜂巢图，并设置四边框和自定义颜色
 ggplot(data_long, aes(x = value, y = group, fill = group)) +
   geom_density_ridges(alpha = 0.7, scale = 1.0, 
                       color = "black", size = 0.3) +
@@ -582,24 +519,14 @@ ggplot(data_long, aes(x = value, y = group, fill = group)) +
     panel.border = element_rect(color = "black", fill = NA, size = 1),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.ticks = element_line(color = "black"),            # 显示刻度线
+    axis.ticks = element_line(color = "black"),           
     axis.text = element_text(size = 12),
   ) +
   scale_fill_manual(values = c("ce" = "#CD534C", "cb" = "#0073C2", "cn" = "#EFC000"))
 
-# # 绘制热图
-# ggsave(
-#   filename = "AngleRange_distribution.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 6,                            # 图形宽度（单位默认为英寸）
-#   height = 3,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
 
 
-
-#处理模板数据
 data <- read.csv("~/Desktop/cbcn/draft_code/new/con_angle_slope.csv", header = TRUE)
 colnames(data)
 colnames(data)[1] <- "cell"
@@ -614,21 +541,19 @@ data <- data %>%
 colnames(data)
 
 
-# 假设你的数据存储在变量 data 中
-# 利用 tidyr::pivot_longer 将数据从宽格式转换为长格式
 data_long <- pivot_longer(
   data,
   cols = c("mean_ce", "mean_cb", "mean_cn"),
   names_to = "group",
   values_to = "value"
 )
-# 修改分组名称（去掉前缀 "mean_"），使之和颜色映射对应
+
 data_long$group <- gsub("mean_", "", data_long$group)
 
-# 设置分组顺序为 ce, cb, cn
+
 data_long$group <- factor(data_long$group, levels = c("cn", "cb", "ce"))
 
-# 绘制蜂巢图，并设置四边框和自定义颜色
+
 ggplot(data_long, aes(x = value, y = group, fill = group)) +
   geom_density_ridges(alpha = 0.7, scale = 1.0, 
                       color = "black", size = 0.3) +
@@ -646,15 +571,6 @@ ggplot(data_long, aes(x = value, y = group, fill = group)) +
     axis.text = element_text(size = 12),
   ) +
   scale_fill_manual(values = c("ce" = "#CD534C", "cb" = "#0073C2", "cn" = "#EFC000"))
-
-# # 绘制热图
-# ggsave(
-#   filename = "angleSlope_distribution.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 6,                            # 图形宽度（单位默认为英寸）
-#   height = 3,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
 
 
@@ -697,7 +613,6 @@ data_long <- data %>%
     names_to = "measure",
     values_to = "value"
   )
-# 2. 修改 factor 标签，使 y 轴显示 ce, cb, cn
 data_long$measure <- factor(data_long$measure,
                             levels = c("mean_cn", "mean_cb", "mean_ce"),
                             labels = c("cn", "cb", "ce"))
@@ -706,23 +621,16 @@ order_stage  <- c("Stage_AB4", "Stage_AB8", "Stage_AB16", "Stage_AB32",
                   "Stage_AB64", "Stage_AB128", "Stage_AB256")
 order_letter <- c("A", "M", "E", "C", "D", "P")
 
-# 2. 生成新变量：提取 cell 的首字母和计算 cell 名称长度
 data_long <- data_long %>%
   mutate(
-    # 强制 stage 按照指定顺序排序
     stage = factor(stage, levels = order_stage),
-    # 提取 cell 的首字母并转为因子
     first_letter = factor(substr(cell, 1, 1), levels = order_letter),
-    # 计算 cell 名称的长度
     cell_length = nchar(cell)
   ) %>%
-  # 3. 按照 stage, 首字母, 及 cell 名称长度排序
   arrange(stage, first_letter, cell_length)
 
-# 4. 更新 cell 为因子并按照排序好的顺序
 data_long$cell <- factor(data_long$cell, levels = unique(data_long$cell))
 colnames(data_long)
-# 绘制热图
 ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
   geom_tile(color = "white") +
   facet_grid(. ~ stage, scales = "free_x", space = "free") +
@@ -731,36 +639,22 @@ ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
     #colors = c("#c5ebde", "#b1d2c7", "#7d9d90", "#496968", "#39515d"), 
     colors = c("#edf6fb", "#c1d6e9", "#95b6d7", "#628db0", "#3674b1"), 
     limits = c(0, 10),
-    oob = scales::squish              # 将超出 [-10,7] 的值压缩到边界
+    oob = scales::squish             
   ) +
-  theme_minimal() +  # 使用简洁主题
+  theme_minimal() +  
   theme(
-    axis.text.x  = element_blank(),  # 移除 x 轴所有 cell 的标签
-    axis.text.y = element_text(size = 10),              # y 轴标签字体大小
+    axis.text.x  = element_blank(),  
+    axis.text.y = element_text(size = 10),            
     legend.position = "right",
-    # 为每个 facet 添加黑色边框
     panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-    # 以下项移除所有背景和网格线：
     panel.background = element_blank(),
     panel.grid = element_blank(),
     plot.background = element_blank()
   )
 
 
-# # 绘制热图
-# ggsave(
-#   filename = "divangle_value.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 10,                            # 图形宽度（单位默认为英寸）
-#   height = 2.5,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
 
-
-
-
-#处理模板数据
 data <- read.csv("~/Desktop/cbcn/draft_code/new/con_angle_range.csv", header = TRUE)
 colnames(data)
 colnames(data)[1] <- "cell"
@@ -786,7 +680,6 @@ data_long <- data %>%
     names_to = "measure",
     values_to = "value"
   )
-# 2. 修改 factor 标签，使 y 轴显示 ce, cb, cn
 data_long$measure <- factor(data_long$measure,
                             levels = c("mean_cn", "mean_cb", "mean_ce"),
                             labels = c("cn", "cb", "ce"))
@@ -795,23 +688,16 @@ order_stage  <- c("Stage_AB4", "Stage_AB8", "Stage_AB16", "Stage_AB32",
                   "Stage_AB64", "Stage_AB128", "Stage_AB256")
 order_letter <- c("A", "M", "E", "C", "D", "P")
 
-# 2. 生成新变量：提取 cell 的首字母和计算 cell 名称长度
 data_long <- data_long %>%
   mutate(
-    # 强制 stage 按照指定顺序排序
     stage = factor(stage, levels = order_stage),
-    # 提取 cell 的首字母并转为因子
     first_letter = factor(substr(cell, 1, 1), levels = order_letter),
-    # 计算 cell 名称的长度
     cell_length = nchar(cell)
   ) %>%
-  # 3. 按照 stage, 首字母, 及 cell 名称长度排序
   arrange(stage, first_letter, cell_length)
 
-# 4. 更新 cell 为因子并按照排序好的顺序
 data_long$cell <- factor(data_long$cell, levels = unique(data_long$cell))
 colnames(data_long)
-# 绘制热图
 ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
   geom_tile(color = "white") +
   facet_grid(. ~ stage, scales = "free_x", space = "free") +
@@ -820,35 +706,21 @@ ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
     #colors = c("#c5ebde", "#b1d2c7", "#7d9d90", "#496968", "#39515d"), 
     colors = c("#edf6fb", "#c1d6e9", "#95b6d7", "#628db0", "#3674b1"), 
     limits = c(0, 10),
-    oob = scales::squish              # 将超出 [-10,7] 的值压缩到边界
+    oob = scales::squish            
   ) +
-  theme_minimal() +  # 使用简洁主题
+  theme_minimal() + 
   theme(
-    axis.text.x  = element_blank(),  # 移除 x 轴所有 cell 的标签
-    axis.text.y = element_text(size = 10),              # y 轴标签字体大小
-    legend.position = "right",
-    # 为每个 facet 添加黑色边框
+    axis.text.x  = element_blank(),  
+    axis.text.y = element_text(size = 10),            
     panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-    # 以下项移除所有背景和网格线：
     panel.background = element_blank(),
     panel.grid = element_blank(),
     plot.background = element_blank()
   )
 
 
-# # 绘制热图
-# ggsave(
-#   filename = "angleRange_value.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 10,                            # 图形宽度（单位默认为英寸）
-#   height = 2.5,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
 
-
-
-#处理模板数据
 data <- read.csv("~/Desktop/cbcn/draft_code/new/con_angle_slope.csv", header = TRUE)
 colnames(data)
 colnames(data)[1] <- "cell"
@@ -874,7 +746,6 @@ data_long <- data %>%
     names_to = "measure",
     values_to = "value"
   )
-# 2. 修改 factor 标签，使 y 轴显示 ce, cb, cn
 data_long$measure <- factor(data_long$measure,
                             levels = c("mean_cn", "mean_cb", "mean_ce"),
                             labels = c("cn", "cb", "ce"))
@@ -883,23 +754,16 @@ order_stage  <- c("Stage_AB4", "Stage_AB8", "Stage_AB16", "Stage_AB32",
                   "Stage_AB64", "Stage_AB128", "Stage_AB256")
 order_letter <- c("A", "M", "E", "C", "D", "P")
 
-# 2. 生成新变量：提取 cell 的首字母和计算 cell 名称长度
 data_long <- data_long %>%
   mutate(
-    # 强制 stage 按照指定顺序排序
     stage = factor(stage, levels = order_stage),
-    # 提取 cell 的首字母并转为因子
     first_letter = factor(substr(cell, 1, 1), levels = order_letter),
-    # 计算 cell 名称的长度
     cell_length = nchar(cell)
   ) %>%
-  # 3. 按照 stage, 首字母, 及 cell 名称长度排序
   arrange(stage, first_letter, cell_length)
 
-# 4. 更新 cell 为因子并按照排序好的顺序
 data_long$cell <- factor(data_long$cell, levels = unique(data_long$cell))
 colnames(data_long)
-# 绘制热图
 ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
   geom_tile(color = "white") +
   facet_grid(. ~ stage, scales = "free_x", space = "free") +
@@ -908,28 +772,17 @@ ggplot(data_long, aes(x = cell, y = measure, fill = value)) +
     #colors = c("#c5ebde", "#b1d2c7", "#7d9d90", "#496968", "#39515d"), 
     colors = c("#edf6fb", "#c1d6e9", "#95b6d7", "#628db0", "#3674b1"), 
     limits = c(0, 0.8),
-    oob = scales::squish              # 将超出 [-10,7] 的值压缩到边界
+    oob = scales::squish            
   ) +
-  theme_minimal() +  # 使用简洁主题
+  theme_minimal() +  
   theme(
-    axis.text.x  = element_blank(),  # 移除 x 轴所有 cell 的标签
-    axis.text.y = element_text(size = 10),              # y 轴标签字体大小
+    axis.text.x  = element_blank(),  
+    axis.text.y = element_text(size = 10),             
     legend.position = "right",
-    # 为每个 facet 添加黑色边框
     panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-    # 以下项移除所有背景和网格线：
     panel.background = element_blank(),
     panel.grid = element_blank(),
     plot.background = element_blank()
   )
 
-
-# # 绘制热图
-# ggsave(
-#   filename = "angleSlope_value.pdf",  # 文件名，你也可以给出绝对路径
-#   plot = last_plot(),                  # 要保存的图形对象
-#   width = 10,                            # 图形宽度（单位默认为英寸）
-#   height = 2.5,                            # 图形高度
-#   dpi = 300                              # 分辨率
-# )
 
