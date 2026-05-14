@@ -344,16 +344,11 @@ for(issue in alignment_issues) {
 # ============================
 # embryo length calculation
 # ============================
-# ------------------------------------------------------------
-# 0. 基本设置
-# ------------------------------------------------------------
+
 setwd("~/Desktop/cbcn/draft_code/new/")
 library(dplyr)
 library(readr)
 
-# ------------------------------------------------------------
-# 1. 读取所有数据（保持原有文件路径）
-# ------------------------------------------------------------
 ce_files <- list(
   ce1 = "~/Desktop/cbcn/CDFile/ce/CD191108plc1p1.csv",
   ce2 = "~/Desktop/cbcn/CDFile/ce/CD200109plc1p1.csv",
@@ -384,12 +379,9 @@ cn_files <- list(
 
 all_files <- c(ce_files, cb_files, cn_files)
 
-# ------------------------------------------------------------
-# 2. 统一的预处理函数（与“后一脚本”一致）
-# ------------------------------------------------------------
 process_dis <- function(data, z_factor = 4.78, time_limit) {
   data %>%
-    select(2, 3, 9, 10, 11) %>%    # 保留 cell, time, x, y, z
+    select(2, 3, 9, 10, 11) %>%    
     mutate(z = z * z_factor) %>%
     group_by(cell) %>%
     as_tibble() %>%
@@ -397,7 +389,6 @@ process_dis <- function(data, z_factor = 4.78, time_limit) {
     select(cell, time, x, y, z)
 }
 
-# 针对每个文件给出 time_limit（可沿用原表）
 time_limits <- list(
   ce1 = 205, ce2 = 205, ce3 = 195, ce4 = 205, ce5 = 195, ce6 = 185, ce7 = 220, ce8 = 195,
   cb1 = 165, cb2 = 175, cb3 = 170, cb4 = 160, cb5 = 165, cb6 = 180,
@@ -410,9 +401,6 @@ processed_data <- lapply(names(all_files), function(name) {
 })
 names(processed_data) <- names(all_files)
 
-# ------------------------------------------------------------
-# 3. 胚胎长度计算（完全照搬示例脚本逻辑）
-# ------------------------------------------------------------
 compute_embryo_length <- function(df, embryo_name) {
   df_filtered <- df %>%
     group_by(cell) %>%
@@ -444,7 +432,6 @@ write_tsv(length_results, "embryo_lengths.txt")
 setwd("~/Desktop/cbcn/draft_code/new/")
 getwd()
 
-# 加载所需包
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -453,7 +440,6 @@ library(ggpubr)
 library(reshape2)
 library(RColorBrewer)
 
-# 加载数据（其中 ce_aligned, cb_aligned, cn_aligned 均已存在）
 load("normalized_position.RData")
 length_all_results <- read.table("~/Desktop/cbcn/draft_code/new/embryo_lengths.txt", header = TRUE, sep = "\t")
 
@@ -461,10 +447,8 @@ summary(ce_aligned)
 head(ce_aligned[[1]], n = 5)
 str(ce_aligned)
 
-# 定义函数：针对每个数据，计算每个 con_time 下 cell 之间的欧氏距离矩阵，
-# 并用当前胚胎的胚胎长度进行归一化
 compute_distance_by_time <- function(df, embryo_name) {
-  # 从 length_all_results 中获取当前胚胎的胚胎长度
+
   embryo_length_current <- length_all_results$embryo_length[
     length_all_results$embryo == embryo_name
   ]
@@ -473,55 +457,43 @@ compute_distance_by_time <- function(df, embryo_name) {
     warning(paste("没有找到胚胎", embryo_name, "对应的胚胎长度，使用1作为默认值"))
     embryo_length_current <- 1
   }
-  
-  # 获取所有非重复的 con_time 值
+
   time_points <- unique(df$con_time)
   
-  # 用于存储每个时间点对应的距离矩阵
   distances_list <- list()
   
-  # 针对每个时间点分组处理
   for (t in time_points) {
-    # 过滤出当前时间点的数据
+
     sub_df <- df %>% filter(con_time == t)
     
-    # 选取空间坐标，构造三维坐标矩阵
     coords <- as.matrix(sub_df %>% select(x, y, z))
     
-    # 计算欧氏距离矩阵（行和列均对应每个 cell）
     dmat <- as.matrix(dist(coords, method = "euclidean"))
     
-    # 使用当前胚胎的胚胎长度做归一化
     dmat <- dmat / embryo_length_current
     
-    # 设置距离矩阵的行名与列名为 cell 名称
     rownames(dmat) <- sub_df$cell
     colnames(dmat) <- sub_df$cell
     
-    # 将当前 con_time 的归一化距离矩阵存入列表，key 为当前 time（字符形式）
     distances_list[[as.character(t)]] <- dmat
   }
   
-  # 返回按时间分组的距离矩阵列表
   return(distances_list)
 }
 
-# --------------------------------------------------
-# 对 ce、cb、cn 三类数据，根据各自的胚胎名称（列表内的 key）进行归一化距离计算
 
-# 对 ce 类数据（例如 ce1 到 ce8）
 distance_ce <- lapply(names(ce_aligned), function(embryo_name) {
   compute_distance_by_time(ce_aligned[[embryo_name]], embryo_name)
 })
 names(distance_ce) <- names(ce_aligned)
 
-# 对 cb 类数据（例如 cb1 到 cb6）
+
 distance_cb <- lapply(names(cb_aligned), function(embryo_name) {
   compute_distance_by_time(cb_aligned[[embryo_name]], embryo_name)
 })
 names(distance_cb) <- names(cb_aligned)
 
-# 对 cn 类数据（例如 cn1 到 cn7）
+
 distance_cn <- lapply(names(cn_aligned), function(embryo_name) {
   compute_distance_by_time(cn_aligned[[embryo_name]], embryo_name)
 })
@@ -557,20 +529,15 @@ summary(distance_ce)
 names(distance_ce)
 names(distance_ce$ce1)
 
-# 假设 distance_ce 已经计算好，并且其结构为：
-# distance_ce 是一个列表，键为 "ce1", "ce2", ... "ce8"
-# 每个 distance_ce[[embryo]] 又是一个列表，键为时间点字符串
 
-# 1. 定义需要提取的时间点
-#desired_times <- c("42.27", "41.31", "40.35", "90.35", "91.31", "120.15", "165.35")
 desired_times <- c("42.27", "90.35", "120.15", "165.35")
 
-# 2. 提取出每个胚胎中指定时间点的距离矩阵
-extracted_matrices <- list()  # 用于保存每个时间点各胚胎的矩阵
+
+extracted_matrices <- list()  
 for (tm in desired_times) {
-  mats <- list()  # 存储各胚胎在该时间点的距离矩阵
+  mats <- list()  
   for (emb in names(distance_ce)) {
-    # 如果该胚胎的列表中包含时间点 tm，则提取出来
+    
     if (tm %in% names(distance_ce[[emb]])) {
       mats[[emb]] <- distance_ce[[emb]][[tm]]
     } else {
@@ -582,21 +549,17 @@ for (tm in desired_times) {
   }
 }
 
-# 3. 对每个时间点计算所有胚胎（ce1到ce8）对应矩阵的逐元素平均值，
-#    即保持矩阵的结构，计算所有矩阵元素对应位置的平均结果，
-#    并将结果保存到 ce_average 中
 ce_average <- list()
 for (tm in names(extracted_matrices)) {
   mats_list <- extracted_matrices[[tm]]
-  # 确保至少有一个矩阵
+
   if (length(mats_list) > 0) {
-    # 使用 Reduce 对所有矩阵逐元素相加，然后除以胚胎数目得到平均矩阵
+   
     avg_mat <- Reduce("+", mats_list) / length(mats_list)
     ce_average[[tm]] <- avg_mat
   }
 }
 
-# 输出结果，查看每个时间点的平均矩阵
 for (tm in names(ce_average)) {
   cat("时间点:", tm, "\n")
   print(ce_average[[tm]])
@@ -605,16 +568,13 @@ for (tm in names(ce_average)) {
 
 
 
-### cb:33.83(30.38)(31.53)(32.68)(34.98), 84.4, 108.54(109.69), 149.92
-# 1. 定义需要提取的时间点
 desired_times <- c("33.83", "84.4", "108.54", "149.92")
 
-# 2. 提取出每个胚胎中指定时间点的距离矩阵
-extracted_matrices <- list()  # 用于保存每个时间点各胚胎的矩阵
+extracted_matrices <- list()  
 for (tm in desired_times) {
-  mats <- list()  # 存储各胚胎在该时间点的距离矩阵
+  mats <- list()  
   for (emb in names(distance_cb)) {
-    # 如果该胚胎的列表中包含时间点 tm，则提取出来
+   
     if (tm %in% names(distance_cb[[emb]])) {
       mats[[emb]] <- distance_cb[[emb]][[tm]]
     } else {
@@ -626,41 +586,37 @@ for (tm in desired_times) {
   }
 }
 
-# 3. 对每个时间点计算所有胚胎对应矩阵的逐元素平均值，
-#    其他时间点使用 Reduce 直接计算均值，
-#    对于时间点 "149.92" 使用特殊处理：
-#    如果某个位置有6个重复值，则取6个的平均；如果只有5个，则按5个构成平均值。
+
 cb_average <- list()
 for (tm in names(extracted_matrices)) {
   mats_list <- extracted_matrices[[tm]]
   
-  # 确保至少有一个矩阵
+  
   if (length(mats_list) > 0) {
     if (tm != "149.92") {
-      # 对于其他时间点，直接使用 Reduce 对所有矩阵逐元素求和后平均
+     
       avg_mat <- Reduce("+", mats_list) / length(mats_list)
       cb_average[[tm]] <- avg_mat
     } else {
-      # 对时间点 "149.92" 采用特殊处理
-      # 先确定最终结果矩阵的尺寸：取所有矩阵中的最大行数和列数
+      
       final_nrow <- max(sapply(mats_list, nrow))
       final_ncol <- max(sapply(mats_list, ncol))
       
-      # 初始化叠加矩阵和计数矩阵
+      
       sum_mat <- matrix(0, nrow = final_nrow, ncol = final_ncol)
       count_mat <- matrix(0, nrow = final_nrow, ncol = final_ncol)
       
-      # 对每个矩阵进行累加，并统计每个位置有效值的数量
+     
       for (mat in mats_list) {
         nr <- nrow(mat)
         nc <- ncol(mat)
         
-        # 假定每个矩阵的数据放在左上角（例如 507x507 子矩阵对应于最终结果的前507行和507列）
+        
         sum_mat[1:nr, 1:nc] <- sum_mat[1:nr, 1:nc] + mat
         count_mat[1:nr, 1:nc] <- count_mat[1:nr, 1:nc] + 1
       }
       
-      # 计算平均值：对于每个位置用累加和除以该位置的计数
+    
       avg_mat <- sum_mat
       avg_mat[count_mat > 0] <- sum_mat[count_mat > 0] / count_mat[count_mat > 0]
       avg_mat[count_mat == 0] <- NA
@@ -670,7 +626,7 @@ for (tm in names(extracted_matrices)) {
   }
 }
 
-# 4. 输出结果，查看每个时间点的平均矩阵
+
 for (tm in names(cb_average)) {
   cat("时间点:", tm, "\n")
   print(cb_average[[tm]])
@@ -681,14 +637,12 @@ for (tm in names(cb_average)) {
 
 ### cn:25.14(25.89)(26.64)(27.39)(28.14)(28.89)(29.65)(30.4)(31.15)(31.9), 78.52, 104.08, 142.43(143.18)
 
-# 1. 定义 cn 的候选时间点组
+
 desired_times <- c("25.14","78.52","104.08","143.18")
-# 2. 提取出每个胚胎中指定时间点的距离矩阵
-extracted_matrices <- list()  # 用于保存每个时间点各胚胎的矩阵
+extracted_matrices <- list()  
 for (tm in desired_times) {
-  mats <- list()  # 存储各胚胎在该时间点的距离矩阵
+  mats <- list()  
   for (emb in names(distance_cn)) {
-    # 如果该胚胎的列表中包含时间点 tm，则提取出来
     if (tm %in% names(distance_cn[[emb]])) {
       mats[[emb]] <- distance_cn[[emb]][[tm]]
     } else {
@@ -700,41 +654,36 @@ for (tm in desired_times) {
   }
 }
 
-# 3. 对每个时间点计算所有胚胎对应矩阵的逐元素平均值，
-#    其他时间点使用 Reduce 直接计算均值，
-#    对于时间点 "149.92" 使用特殊处理：
-#    如果某个位置有6个重复值，则取6个的平均；如果只有5个，则按5个构成平均值。
+
 cn_average <- list()
 for (tm in names(extracted_matrices)) {
   mats_list <- extracted_matrices[[tm]]
   
-  # 确保至少有一个矩阵
   if (length(mats_list) > 0) {
     if (tm != "143.18") {
-      # 对于其他时间点，直接使用 Reduce 对所有矩阵逐元素求和后平均
+     
       avg_mat <- Reduce("+", mats_list) / length(mats_list)
       cn_average[[tm]] <- avg_mat
     } else {
-      # 对时间点 "149.92" 采用特殊处理
-      # 先确定最终结果矩阵的尺寸：取所有矩阵中的最大行数和列数
+     
       final_nrow <- max(sapply(mats_list, nrow))
       final_ncol <- max(sapply(mats_list, ncol))
       
-      # 初始化叠加矩阵和计数矩阵
+    
       sum_mat <- matrix(0, nrow = final_nrow, ncol = final_ncol)
       count_mat <- matrix(0, nrow = final_nrow, ncol = final_ncol)
       
-      # 对每个矩阵进行累加，并统计每个位置有效值的数量
+    
       for (mat in mats_list) {
         nr <- nrow(mat)
         nc <- ncol(mat)
         
-        # 假定每个矩阵的数据放在左上角（例如 507x507 子矩阵对应于最终结果的前507行和507列）
+    
         sum_mat[1:nr, 1:nc] <- sum_mat[1:nr, 1:nc] + mat
         count_mat[1:nr, 1:nc] <- count_mat[1:nr, 1:nc] + 1
       }
       
-      # 计算平均值：对于每个位置用累加和除以该位置的计数
+     
       avg_mat <- sum_mat
       avg_mat[count_mat > 0] <- sum_mat[count_mat > 0] / count_mat[count_mat > 0]
       avg_mat[count_mat == 0] <- NA
@@ -744,7 +693,7 @@ for (tm in names(extracted_matrices)) {
   }
 }
 
-# 4. 输出结果，查看每个时间点的平均矩阵
+
 for (tm in names(cn_average)) {
   cat("时间点:", tm, "\n")
   print(cn_average[[tm]])
@@ -752,30 +701,28 @@ for (tm in names(cn_average)) {
 }
 
 
-# 加载所需的包
+
 library(pheatmap)
 library(gridExtra)
 library(ggplot2)
 library(dplyr)
 library(tibble)
-library(ggplotify)  # 用于将 grob 转换为 ggplot 对象
-library(cowplot)    # 用于组合 ggplot 对象
+library(ggplotify)  
+library(cowplot)    
 
-# 定义注释颜色（与原代码一致）
+
 ann_colors <- list(
   group = c(A = "#F8766D", M = "#A3A500",
             E = "#00BF7D", C = "#00B0F6",
             D = "#E76BF3")
 )
 
-# 辅助函数：根据矩阵生成热图，并转换为 ggplot 对象
-# 为了让所有热图总体尺寸相同，我们先设定总体绘图区域的宽高（单位 mm）
-# 然后根据矩阵的列数和行数计算每个 cell 的尺寸
+
 plot_heatmap <- function(mat, title) {
-  # 如果矩阵有行名，则生成行注释，否则设为空
+ 
   if (!is.null(rownames(mat))) {
     ann <- data.frame(row = rownames(mat)) %>% 
-      mutate(group = substr(row, 1, 1)) %>%  # 取行名首字符进行分组
+      mutate(group = substr(row, 1, 1)) %>%  
       column_to_rownames("row") %>% 
       mutate(group = factor(ifelse(group %in% c("P", "Z"), "D", group),
                             levels = c("A", "M", "E", "C", "D")))
@@ -783,22 +730,19 @@ plot_heatmap <- function(mat, title) {
     ann <- NULL
   }
   
-  # 设定“绘图区域”尺寸（仅指热图主体，不含外围 annotation）
-  # 这里我们希望每个热图固定占 100 mm x 100 mm 的大小
+ 
   desired_width_mm <- 100
   desired_height_mm <- 100
   
-  # 计算矩阵行数与列数
+ 
   n_cols <- ncol(mat)
   n_rows <- nrow(mat)
   
-  # 动态计算每个 cell 的尺寸（单位：mm）
-  # 这样不论矩阵多少列、多少行，热图主体的总尺寸都是 desired_width_mm x desired_height_mm
+ 
   cellwidth_val <- desired_width_mm / n_cols
   cellheight_val <- desired_height_mm / n_rows
   
-  # 使用 pheatmap 绘制热图
-  # 注意：这里设置 cellwidth 和 cellheight 为动态计算的数值
+  
   p <- pheatmap(mat,
                 cluster_rows = FALSE,
                 cluster_cols = FALSE,
@@ -812,31 +756,29 @@ plot_heatmap <- function(mat, title) {
                 color = colorRampPalette(c("navy", "white", "firebrick3"))(20),
                 main = title)
   
-  # 将 pheatmap 返回的 gtable 转换为 ggplot 对象
+ 
   gg_hm <- as.ggplot(p$gtable)
   return(gg_hm)
 }
 
-# === 针对 ce_average 生成热图 ===
-# 假设 ce_average 是一个列表，每个元素均为 nxn 数值矩阵
+
 ce_plots <- lapply(names(ce_average), function(tm) {
   plot_heatmap(ce_average[[tm]], title = paste0("ce_average: ", tm))
 })
 
-# 使用 cowplot::plot_grid 组合时，指定相同的宽高比例，每个子图大小一致
+
 ce_grid <- plot_grid(plotlist = ce_plots, nrow = 1)
 
-# 保存组合后的图形，固定整个画布的宽高
+
 ggsave("ce_average_heatmaps.pdf", ce_grid, width = 15, height = 5)
 
-# === 针对 cb_average 生成热图 ===
+
 cb_plots <- lapply(names(cb_average), function(tm) {
   plot_heatmap(cb_average[[tm]], title = paste0("cb_average: ", tm))
 })
 cb_grid <- plot_grid(plotlist = cb_plots, nrow = 1)
 ggsave("cb_average_heatmaps.pdf", cb_grid, width = 15, height = 5)
 
-# === 针对 cn_average 生成热图 ===
 cn_plots <- lapply(names(cn_average), function(tm) {
   plot_heatmap(cn_average[[tm]], title = paste0("cn_average: ", tm))
 })
